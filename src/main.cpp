@@ -1,8 +1,18 @@
 #include <Arduino.h>
+
+const int LAMP_PIN = 2;
+const int KNOP_PIN = 3;
 void setup() {
-// write your initialization code here
+    pinMode(LAMP_PIN, OUTPUT);
+    pinMode(KNOP_PIN, INPUT_PULLUP);
 }
 
 void loop() {
-// write your code here
+    int knopStatus = digitalRead(KNOP_PIN);
+
+    if (knopStatus == LOW) {
+        digitalWrite(LAMP_PIN, HIGH);
+    } else {
+        digitalWrite(LAMP_PIN, LOW);
+    }
 }
