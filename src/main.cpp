@@ -1,7 +1,7 @@
 #include <Arduino.h>
 
 const int KNOP1_PIN = 5;
-const int KNOP2_PIN = 6;
+const int KNOP2_PIN = 6; // reserved, not used yet
 
 int counter = 0;
 
@@ -11,6 +11,12 @@ const int LED3 = 3;
 const int LED4 = 4;
 
 const int LED_PINS[] = {LED1, LED2, LED3, LED4};
+
+// Debounce state
+int lastKnop1Reading = HIGH;   // last raw reading
+int knop1State = HIGH;         // debounced state
+unsigned long lastDebounceTime = 0;
+const unsigned long DEBOUNCE_DELAY = 25; // ms
 
 void setup() {
     Serial.begin(9600);
@@ -39,11 +45,23 @@ void Calculate(int count) {
 }
 
 void loop() {
-    int knopStatus = digitalRead(KNOP1_PIN);
+    int reading = digitalRead(KNOP1_PIN);
 
-    if (knopStatus == LOW) {
-        counter++;
-        Calculate(counter);
-        if (counter == 15) counter = 0;
+    if (reading != lastKnop1Reading) {
+        lastDebounceTime = millis();
     }
+
+    if ((millis() - lastDebounceTime) > DEBOUNCE_DELAY) {
+        if (reading != knop1State) {
+            knop1State = reading;
+
+            if (knop1State == LOW) {
+                counter++;
+                if (counter > 15) counter = 0;
+                Calculate(counter);
+            }
+        }
+    }
+
+    lastKnop1Reading = reading;
 }
