@@ -3,38 +3,36 @@
 
 SevSeg sevseg;
 
-const int BUTTON1_PIN = 5;   // sensor 1: voor- en achterwiel
-const int BUTTON2_PIN = 6;   // sensor 2: stopt de tijd
-
-int carCount = 0;
-
-// Waar we zijn met de huidige auto:
-// 0 = wachten op het voorwiel bij knop 1
-// 1 = tijd loopt, wachten op knop 2
-// 2 = snelheid bekend, wachten op het achterwiel bij knop 1
-// 3 = auto geteld, wachten op het achterwiel bij knop 2
-int step = 0;
-
+// pins
 const int WARNING_LED = 8;
 const int LED1 = 7;
 const int LED2 = 2;
 const int LED3 = 3;
 const int LED4 = 4;
-
 const int LED_PINS[] = {LED1, LED2, LED3, LED4};
+const int BUTTON1_PIN = 5;   // slang 1
+const int BUTTON2_PIN = 6;   // slang 2
 
+
+
+// Alle states van het proces:
+// 0 = wachten op het voorwiel bij knop 1
+// 1 = tijd loopt, wachten op knop 2
+// 2 = snelheid bekend, wachten op het achterwiel bij knop 1
+// 3 = auto geteld, wachten op het achterwiel bij knop 2
+int step = 0;
+int carCount = 0;
+unsigned long startTime = 0;
 
 int lastButton1Reading = HIGH;
 int button1State = HIGH;
 unsigned long lastDebounceTime1 = 0;
-
 
 int lastButton2Reading = HIGH;
 int button2State = HIGH;
 unsigned long lastDebounceTime2 = 0;
 
 const unsigned long DEBOUNCE_DELAY = 25; // ms
-
 
 const float DISTANCE = 0.6;    // meter tussen de twee sensoren
 const float MIN_SPEED = 0.2;   // km/u
@@ -47,8 +45,6 @@ const float maxSpeedMs = MAX_SPEED * 1000.0 / 3600.0;
 const float minTime = DISTANCE / maxSpeedMs;          // 0.216 s
 
 const unsigned long maxTimeMs = (unsigned long)(maxTime * 1000.0);
-
-unsigned long startTime = 0;
 
 void setup() {
     Serial.begin(9600);
@@ -86,7 +82,7 @@ void triggerWarning() {
     digitalWrite(WARNING_LED, HIGH);
     sevseg.blank();
     step = 0;
-    Serial.println("Warning: reset");
+    Serial.println("Waarschuwing: reset");
 }
 
 void calculateSpeed(unsigned long elapsedMs) {
@@ -134,13 +130,13 @@ void loop() {
                     digitalWrite(WARNING_LED, LOW);
                     startTime = now;
                     step = 1;
-                    Serial.println("Front wheel: timer started");
+                    Serial.println("Voor wiel: timer start");
                     // leeg display
-                    sevseg.setNumber((int)(000), 1);
+                    sevseg.blank();
                 } else if (step == 2) {
                     carCount++;
                     if (carCount > 15) carCount = 0;
-                    Serial.print("Rear wheel: car count ");
+                    Serial.print("Achter wiel: count + 1 ");
                     showCount(carCount);
                     step = 3;
                 }
@@ -151,7 +147,7 @@ void loop() {
     // Duurt het te lang, dan laten we de laagste snelheid zien.
     // auto telt niet mee
     if (step == 1 && (now - startTime) >= maxTimeMs) {
-        Serial.println("Timeout: too slow");
+        Serial.println("Timeout: te langzaam");
         calculateSpeed(maxTimeMs);
         triggerWarning();
     }
@@ -172,7 +168,7 @@ void loop() {
                     step = 2;
                 } else if (step == 3) {
                     // Achterwiel over knop 2: auto is voorbij, opnieuw beginnen
-                    Serial.println("Rear wheel passed sensor 2: ready");
+                    Serial.println("Achter wiel voor bij sensore 2: Klaar");
                     step = 0;
                 } else {
                     // Knop 2 op het verkeerde moment
