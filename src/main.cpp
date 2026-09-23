@@ -1,9 +1,12 @@
 #include <Arduino.h>
+#include <SevSeg.h>
 
+SevSeg sevseg;
 const int KNOP1_PIN = 5;   // start button
 const int KNOP2_PIN = 6;   // stop button
 
-int counter = 0;
+int Counter = 0;
+int AssCount = 0;
 
 const int WarningLED = 8;
 const int LED1 = 7;
@@ -30,15 +33,14 @@ const float Distance = 0.6;   // meter
 const float minSpeed = 0.2;   // km/uur
 const float maxSpeed = 10;    // km/uur
 
-const float snelheidMsMin = minSpeed * 1000.0 / 3600.0;  // minimale snelheid in m/s
-const float tijdMax = Distance / snelheidMsMin;          // maximale tijd in s (10.8 s)
+const float snelheidMsMin = minSpeed * 1000.0 / 3600.0;
+const float tijdMax = Distance / snelheidMsMin;          // 10.8 s
 
-const float snelheidMsMax = maxSpeed * 1000.0 / 3600.0;  // maximale snelheid in m/s
-const float tijdMin = Distance / snelheidMsMax;          // minimale tijd in s (0.216 s)
+const float snelheidMsMax = maxSpeed * 1000.0 / 3600.0;
+const float tijdMin = Distance / snelheidMsMax;          // 0.216 s
 
 const unsigned long tijdMaxMs = (unsigned long)(tijdMax * 1000.0);
 
-// Timer state
 bool timerRunning = false;
 unsigned long startTime = 0;
 
@@ -51,9 +53,14 @@ void setup() {
     pinMode(WarningLED, OUTPUT);
     pinMode(KNOP1_PIN, INPUT_PULLUP);
     pinMode(KNOP2_PIN, INPUT_PULLUP);
+
+    byte digitPins[] = {A2, A3, A4};
+    byte segmentPins[] = {9, 10, 11, 12, 13, A0, A1, A5};
+    sevseg.begin(COMMON_CATHODE, 3, digitPins, segmentPins, true, false, true, false);
+    sevseg.setBrightness(90);
 }
 
-void Calculate(int count) {
+void Count(int count) {
     Serial.println(count);
     for (int i = 3; i >= 0; i--) {
         int bitWaarde = 1 << i;
@@ -67,14 +74,14 @@ void Calculate(int count) {
 }
 
 void CalculateSpeed(unsigned long elapsedMs) {
-    float tijd = elapsedMs / 1000.0;   // seconden
+    float tijd = elapsedMs / 1000.0;
     float speedKmh;
 
     if (tijd <= tijdMin) {
-        speedKmh = maxSpeed;           // te snel: begrens op 10 km/uur
+        speedKmh = maxSpeed;
     } else if (tijd >= tijdMax) {
         digitalWrite(WarningLED, HIGH);
-        speedKmh = minSpeed;           // te langzaam: begrens op 0.2 km/uur
+        speedKmh = minSpeed;
     } else {
         speedKmh = (Distance / tijd) * 3.6;   // m/s naar km/uur
     }
@@ -86,6 +93,8 @@ void CalculateSpeed(unsigned long elapsedMs) {
     Serial.print("Speed: ");
     Serial.print(speedKmh, 2);
     Serial.println(" km/uur");
+
+    sevseg.setNumber((int)(speedKmh * 10 + 0.5), 1);
 }
 
 void loop() {
@@ -103,17 +112,22 @@ void loop() {
             knop1State = reading;
 
             if (knop1State == LOW) {
-                digitalWrite(WarningLED, LOW);
-                counter++;
-                if (counter > 15) counter = 0;
-                Calculate(counter);
+                AssCount++;
+                if (AssCount == 2) {
+                    AssCount = 0;
+                    digitalWrite(WarningLED, LOW);
+                    Counter++;
+                    if (Counter > 15) Counter = 0;
+                    Count(Counter);
 
-                if (!timerRunning) {
-                    startTime = now;
-                    timerRunning = true;
-                    Serial.println("Timer started");
+                    if (!timerRunning) {
+                        startTime = now;
+                        timerRunning = true;
+                        Serial.println("Timer started");
+                    }
                 }
             }
+
         }
     }
 
@@ -133,7 +147,7 @@ void loop() {
             knop2State = reading2;
 
             if (knop2State == LOW) {
-                if (timerRunning) {
+                if (timerRunning & AssCount == 2) {
                     unsigned long elapsed = now - startTime;
                     timerRunning = false;
                     CalculateSpeed(elapsed);
@@ -147,4 +161,5 @@ void loop() {
 
     lastKnop1Reading = reading;
     lastKnop2Reading = reading2;
+    sevseg.refreshDisplay();
 }
