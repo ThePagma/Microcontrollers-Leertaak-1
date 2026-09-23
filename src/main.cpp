@@ -12,6 +12,7 @@ int carCount = 0;
 // 0 = wachten op het voorwiel bij knop 1
 // 1 = tijd loopt, wachten op knop 2
 // 2 = snelheid bekend, wachten op het achterwiel bij knop 1
+// 3 = auto geteld, wachten op het achterwiel bij knop 2
 int step = 0;
 
 const int WARNING_LED = 8;
@@ -141,7 +142,7 @@ void loop() {
                     if (carCount > 15) carCount = 0;
                     Serial.print("Rear wheel: car count ");
                     showCount(carCount);
-                    step = 0;
+                    step = 3;
                 }
             }
         }
@@ -169,8 +170,12 @@ void loop() {
                     // Tijd stoppen en snelheid uitrekenen
                     calculateSpeed(now - startTime);
                     step = 2;
+                } else if (step == 3) {
+                    // Achterwiel over knop 2: auto is voorbij, opnieuw beginnen
+                    Serial.println("Rear wheel passed sensor 2: ready");
+                    step = 0;
                 } else {
-                    // Knop 2 terwijl er geen meting loopt
+                    // Knop 2 op het verkeerde moment
                     triggerWarning();
                 }
             }
