@@ -54,23 +54,38 @@ void setup() {
 }
 
 void Calculate(int count) {
-    Serial.println(count, BIN);
-
+    Serial.println(count);
     for (int i = 3; i >= 0; i--) {
         int bitWaarde = 1 << i;
         if (count & bitWaarde) {
             digitalWrite(LED_PINS[i], HIGH);
-            Serial.print("1");
         } else {
             digitalWrite(LED_PINS[i], LOW);
-            Serial.print("0");
         }
     }
     Serial.println();
 }
 
-void CalculateSpeed() {
+void CalculateSpeed(unsigned long elapsedMs) {
+    float tijd = elapsedMs / 1000.0;   // seconden
+    float speedKmh;
 
+    if (tijd <= tijdMin) {
+        speedKmh = maxSpeed;           // te snel: begrens op 10 km/uur
+    } else if (tijd >= tijdMax) {
+        digitalWrite(WarningLED, HIGH);
+        speedKmh = minSpeed;           // te langzaam: begrens op 0.2 km/uur
+    } else {
+        speedKmh = (Distance / tijd) * 3.6;   // m/s naar km/uur
+    }
+
+    Serial.print("Elapsed time: ");
+    Serial.print(elapsedMs);
+    Serial.println(" ms");
+
+    Serial.print("Speed: ");
+    Serial.print(speedKmh, 2);
+    Serial.println(" km/uur");
 }
 
 void loop() {
@@ -88,6 +103,7 @@ void loop() {
             knop1State = reading;
 
             if (knop1State == LOW) {
+                digitalWrite(WarningLED, LOW);
                 counter++;
                 if (counter > 15) counter = 0;
                 Calculate(counter);
@@ -123,6 +139,7 @@ void loop() {
                     CalculateSpeed(elapsed);
                 } else {
                     Serial.println("Button 2 pressed without start, ignored");
+                    digitalWrite(WarningLED, HIGH);
                 }
             }
         }
